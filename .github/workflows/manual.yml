@@ -1,0 +1,91 @@
+name: Manual SFDX Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      MANUAL_COMMIT_ID:
+        description: 'Commit ID to compare from (leave as "default" to auto-calculate)'
+        required: false
+        default: 'default'
+      TEST_LEVEL:
+        description: 'Enter type of test case to be checked'
+        required: true
+        default: 'NoTestRun'
+        type: choice
+        options:
+          - NoTestRun
+          - RunSpecifiedTests
+          - RunLocalTests
+      TEST_CLASSES:
+        description: 'Comma-separated test class names (required for RunSpecifiedTests)'
+        required: false
+        default: ''
+
+jobs:
+  sfdx-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      Test_ORG_USER: deployment.user@abbvie.com.trn
+      Test_ORG_PASSWORD: AbbvieTrnQ225!!
+      Test_ORG_URL: https://test.salesforce.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: teambranch
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+
+      - name: Install Salesforce CLI
+        run: npm install -g sfdx-cli
+
+      - name: Install sfpowerkit plugin
+        run: echo 'y' | sfdx plugins:install sfpowerkit
+
+      - name: Show SFDX version
+        run: sfdx --version
+
+      - name: Prepare deployment and run SFDX commands
+        run: |
+          set -e
+
+          TEST_LEVEL="${{ github.event.inputs.TEST_LEVEL }}"
+          TEST_CLASSES="${{ github.event.inputs.TEST_CLASSES }}"
+          MANUAL_COMMIT_ID="${{ github.event.inputs.MANUAL_COMMIT_ID }}"
+
+          if [[ "$TEST_LEVEL" == "RunSpecifiedTests" ]]; then
+            TEST_CLASSES=$(echo "$TEST_CLASSES" | tr -d ' ')
+            if [[ -z "$TEST_CLASSES" || "$TEST_CLASSES" =~ ^[Nn]ull$ ]]; then
+              echo "❌ Please specify TEST_CLASSES when using RunSpecifiedTests"
+              exit 1
+            fi
+            TEST_LEVEL="$TEST_LEVEL -r $TEST_CLASSES"
+          fi
+
+          echo "🧾 TEST_LEVEL: $TEST_LEVEL"
+
+          # Get latest and previous commit IDs
+          LATEST_COMMIT_ID=$(git log -n 1 --pretty=format:'%H')
+          if [[ "$MANUAL_COMMIT_ID" == "default" ]]; then
+            MANUAL_COMMIT_ID=$(git log --format="%P" -n 1 | cut -d ' ' -f1)
+          fi
+
+          echo "🔄 Latest COMMIT ID: $LATEST_COMMIT_ID"
+          echo "🔁 Previous COMMIT ID: $MANUAL_COMMIT_ID"
+
+          echo "📦 Generating Delta Package"
+          sfdx sfpowerkit:project:diff -r "$MANUAL_COMMIT_ID" -t "$LATEST_COMMIT_ID" -d Delta_pkg
+
+          if [ ! -d "Delta_pkg" ]; then
+            echo "❗ No diff found — nothing to deploy."
+            exit 1
+          fi
+
+          echo "🔐 Authenticating to Salesforce Org"
+          sfdx sfpowerkit:auth:login -u "$Test_ORG_USER" -p "$Test_ORG_PASSWORD" -r "$Test_ORG_URL"
+
