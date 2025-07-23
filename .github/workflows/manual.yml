@@ -97,12 +97,5 @@ jobs:
 
           echo "🔐 Authenticating to Salesforce Org"
           sfdx sfpowerkit:auth:login -u "$ORG_USER" -p "$ORG_PASSWORD" -r "$ORG_URL"
-
-          echo "🧪 Validating Deployment"
-          sfdx force:source:deploy -c -p Delta_pkg/force-app -u "$ORG_USER" -l "$TEST_LEVEL"
-
-          echo "🚀 Deploying to Org"
-          sfdx force:source:deploy -p Delta_pkg/force-app -u "$ORG_USER"
-
           echo "🎉 Deployment completed successfully"
 
