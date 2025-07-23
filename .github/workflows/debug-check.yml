@@ -16,15 +16,10 @@ jobs:
         with:
           fetch-depth: 0  # Required to get full Git history
 
-      - name: Set up Git user
-        run: |
-          git config --global user.email "you@example.com"
-          git config --global user.name "GitHub Action"
-
       - name: Fetch base branch
         run: git fetch origin ${{ github.base_ref }}
 
       - name: Run debug check with snippet
         shell: pwsh
-        run: ./scripts/detect_systemdebug.ps1 ${{ github.base_ref }}
+        run: ./detect_systemdebug.ps1 ${{ github.base_ref }}
 
