@@ -1,4 +1,4 @@
-name: IFT-DEPLOY-TO-QA
+name: Prodvalidation
 
 on:
   workflow_dispatch:
@@ -26,16 +26,15 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ORG_USER: ${{ secrets.TEST_ORG_USER }}
-      ORG_PASSWORD: ${{ secrets.TEST_ORG_PASSWORD }}
-      ORG_URL: ${{ secrets.TEST_ORG_URL }}
+      Test_ORG_USER: deployment.user@abbvie.com.trn
+      Test_ORG_PASSWORD: AbbvieTrnQ225!!
+      Test_ORG_URL: https://test.salesforce.com
 
     steps:
-      - name: Checkout code with full history
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: teambranch
-          fetch-depth: 0  # Ensures full commit history is available
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -55,12 +54,10 @@ jobs:
         run: |
           set -e
 
-          # Input parameters
           TEST_LEVEL="${{ github.event.inputs.TEST_LEVEL }}"
           TEST_CLASSES="${{ github.event.inputs.TEST_CLASSES }}"
           MANUAL_COMMIT_ID="${{ github.event.inputs.MANUAL_COMMIT_ID }}"
 
-          # Handle RunSpecifiedTests case
           if [[ "$TEST_LEVEL" == "RunSpecifiedTests" ]]; then
             TEST_CLASSES=$(echo "$TEST_CLASSES" | tr -d ' ')
             if [[ -z "$TEST_CLASSES" || "$TEST_CLASSES" =~ ^[Nn]ull$ ]]; then
@@ -72,20 +69,14 @@ jobs:
 
           echo "🧾 TEST_LEVEL: $TEST_LEVEL"
 
-          # Get Git commit IDs
+          # Get latest and previous commit IDs
           LATEST_COMMIT_ID=$(git log -n 1 --pretty=format:'%H')
           if [[ "$MANUAL_COMMIT_ID" == "default" ]]; then
             MANUAL_COMMIT_ID=$(git log --format="%P" -n 1 | cut -d ' ' -f1)
           fi
 
-          echo "🔁 Previous Commit ID: $MANUAL_COMMIT_ID"
-          echo "🔄 Latest Commit ID:   $LATEST_COMMIT_ID"
-
-          # Validate commit IDs
-          if [[ -z "$MANUAL_COMMIT_ID" || -z "$LATEST_COMMIT_ID" ]]; then
-            echo "❌ One or both commit IDs are empty. Cannot perform diff."
-            exit 1
-          fi
+          echo "🔄 Latest COMMIT ID: $LATEST_COMMIT_ID"
+          echo "🔁 Previous COMMIT ID: $MANUAL_COMMIT_ID"
 
           echo "📦 Generating Delta Package"
           sfdx sfpowerkit:project:diff -r "$MANUAL_COMMIT_ID" -t "$LATEST_COMMIT_ID" -d Delta_pkg
@@ -96,13 +87,4 @@ jobs:
           fi
 
           echo "🔐 Authenticating to Salesforce Org"
-          sfdx sfpowerkit:auth:login -u "$ORG_USER" -p "$ORG_PASSWORD" -r "$ORG_URL"
-
-          echo "🧪 Validating Deployment"
-          sfdx force:source:deploy -c -p Delta_pkg/force-app -u "$ORG_USER" -l "$TEST_LEVEL"
-
-          echo "🚀 Deploying to Org"
-          sfdx force:source:deploy -p Delta_pkg/force-app -u "$ORG_USER"
-
-          echo "🎉 Deployment completed successfully"
-
+          sfdx sfpowerkit:auth:login -u "$Test_ORG_USER" -p "$Test_ORG_PASSWORD" -r "$Test_ORG_URL"

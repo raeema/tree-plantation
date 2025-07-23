@@ -1,0 +1,26 @@
+name: Check for Debug Statements
+
+on:
+  pull_request:
+    branches:
+      - '**'  # Trigger on PRs to any branch
+
+jobs:
+  check-debug:
+    name: Scan for System.debug and console.log
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required to get full Git history
+
+      - name: Set up Git user
+        run: |
+          git config --global user.email "you@example.com"
+          git config --global user.name "GitHub Action"
+
+      - name: Run PowerShell script to detect debug statements
+        shell: pwsh
+        run: ./detect_systemdebug.ps1
