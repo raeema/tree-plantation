@@ -21,6 +21,10 @@ jobs:
           git config --global user.email "you@example.com"
           git config --global user.name "GitHub Action"
 
-      - name: Run PowerShell script to detect debug statements
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}
+
+      - name: Run debug check with snippet
         shell: pwsh
-        run: ./detect_systemdebug.ps1
+        run: ./scripts/detect_systemdebug.ps1 ${{ github.base_ref }}
+
