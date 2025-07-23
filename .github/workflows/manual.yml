@@ -26,9 +26,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ORG_USER: ${{ secrets.TEST_ORG_USER }}
-      ORG_PASSWORD: ${{ secrets.TEST_ORG_PASSWORD }}
-      ORG_URL: ${{ secrets.TEST_ORG_URL }}
+      ORG_USER: deployment.user@abbvie.com.trn
+      ORG_PASSWORD: AbbvieTrnQ225!!
+      ORG_URL: https://test.salesforce.com/
 
     steps:
       - name: Checkout code with full history
