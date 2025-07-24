@@ -40,9 +40,11 @@ foreach ($file in $diffFiles) {
         $debugMatches = Select-String -Path $file -Pattern '\bSystem\.debug\b'
         if ($debugMatches) {
             Write-Host "❌ System.debug found in: $file"
-            foreach ($match in $debugMatches) {
-                Write-Host "   ➤ Line $($match.LineNumber): $($match.Line.Trim())"
-            }
+foreach ($match in $debugMatches) {
+    $lineNumber = $match.LineNumber
+    $lineText = $match.Line.Trim()
+    Write-Host "   ➤ Match in ${file}:${lineNumber} → ${lineText}"
+}
             $hasIssue = $true
         }
 
