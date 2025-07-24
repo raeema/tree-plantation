@@ -39,7 +39,7 @@ foreach ($file in $diffFiles) {
         # Search for System.debug
         $debugMatches = Select-String -Path $file -Pattern '\bSystem\.debug\b'
         if ($debugMatches) {
-            Write-Host "❌ System.debug found in: $file"
+            Write-Host "❌ System.debug found in: ${file}"
 foreach ($match in $debugMatches) {
     $lineNumber = $match.LineNumber
     $lineText = $match.Line.Trim()
@@ -51,7 +51,7 @@ foreach ($match in $debugMatches) {
         # Search for console.log
         $consoleMatches = Select-String -Path $file -Pattern '\bconsole\.log\b'
         if ($consoleMatches) {
-            Write-Host "❌ console.log found in: $file"
+            Write-Host "❌ console.log found in: ${file}"
             foreach ($match in $consoleMatches) {
                 Write-Host "   ➤ Line $($match.LineNumber): $($match.Line.Trim())"
             }
