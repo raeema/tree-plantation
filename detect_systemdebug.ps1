@@ -1,68 +1,51 @@
-# ================================================
-# Extract PR target branch (e.g., refs/heads/main)
-# ================================================
-$targetBranchRef = $env:SYSTEM_PULLREQUEST_TARGETBRANCH
-$targetBranch = $targetBranchRef -replace 'refs/heads/', ''
+param (
+  [string]$baseBranch = "main"
+)
 
-Write-Host "🔄 Fetching target branch: $targetBranch"
-git fetch origin $targetBranch
+Write-Host "🔍 Scanning for System.debug or console.log in files changed since origin/$baseBranch..."
 
-# ================================================
-# Validate if common base exists
-# ================================================
-$mergeBase = git merge-base origin/$targetBranch HEAD
+# Find common ancestor commit between origin/$baseBranch and HEAD
+$baseCommit = git merge-base origin/$baseBranch HEAD
 
-if (-not $mergeBase) {
-    Write-Error "❌ No common base between origin/$targetBranch and HEAD."
+if (-not $baseCommit) {
+    Write-Error "❌ No common base between origin/$baseBranch and HEAD."
     exit 1
 }
 
-# ================================================
-# Get all changed files in the PR
-# ================================================
-$diffFiles = git diff --name-only origin/$targetBranch...HEAD
+# Get changed Apex (.cls) or JavaScript (.js) files between baseCommit and HEAD
+$changedFiles = git diff --name-only $baseCommit HEAD | Where-Object {
+    $_ -like '*.cls' -or $_ -like '*.js'
+}
 
-if (-not $diffFiles) {
-    Write-Host "✅ No files changed in this PR."
+if (-not $changedFiles) {
+    Write-Host "ℹ️ No relevant files changed."
     exit 0
 }
 
-Write-Host "🔍 Analyzing changed files for 'System.debug' and 'console.log'..."
+$debugFound = $false
+$pattern = '(System\.debug|console\.log)'
 
-$hasIssue = $false
+foreach ($file in $changedFiles) {
+    if (-not (Test-Path $file)) {
+        Write-Warning "⚠️ Skipped missing file: $file"
+        continue
+    }
 
-# ================================================
-# Analyze each file
-# ================================================
-foreach ($file in $diffFiles) {
-    if (Test-Path $file) {
-        # Search for System.debug
-        $debugMatches = Select-String -Path $file -Pattern '\bSystem\.debug\b'
-        if ($debugMatches) {
-            Write-Host "❌ System.debug found in: ${file}"
-foreach ($match in $debugMatches) {
-    $lineNumber = $match.LineNumber
-    $lineText = $match.Line.Trim()
-    Write-Host "   ➤ Match in ${file}:${lineNumber} → ${lineText}"
-}
-            $hasIssue = $true
-        }
-
-        # Search for console.log
-        $consoleMatches = Select-String -Path $file -Pattern '\bconsole\.log\b'
-        if ($consoleMatches) {
-            Write-Host "❌ console.log found in: ${file}"
-            foreach ($match in $consoleMatches) {
-                Write-Host "   ➤ Line $($match.LineNumber): $($match.Line.Trim())"
-            }
-            $hasIssue = $true
+    $lines = Get-Content $file
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match $pattern) {
+            $lineNumber = $i + 1
+            # <-- FIXED interpolation here:
+            Write-Host "❌ Match in ${file}:${lineNumber}"
+            Write-Host "    >> $($lines[$i].Trim())"
+            $debugFound = $true
         }
     }
 }
 
-if ($hasIssue) {
-    Write-Error "❌ PR check failed: 'System.debug' or 'console.log' found in changed files."
+if ($debugFound) {
+    Write-Error "❌ Failing PR: Debug statements found in changed files."
     exit 1
 } else {
-    Write-Host "✅ All good: No System.debug or console.log found in any changed files."
+    Write-Host "✅ No debug statements found."
 }
