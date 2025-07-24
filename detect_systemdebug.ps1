@@ -44,7 +44,7 @@ foreach ($file in $diffFiles) {
             foreach ($match in $debugMatches) {
                 $lineNumber = $match.LineNumber
                 $lineText = $match.Line.Trim()
-                Write-Host "   ➤ Match in $file:$lineNumber → $lineText"
+                Write-Host "   ➤ Match in ${file}:${lineNumber} → $lineText"
             }
             $hasIssue = $true
         }
@@ -56,7 +56,7 @@ foreach ($file in $diffFiles) {
             foreach ($match in $consoleMatches) {
                 $lineNumber = $match.LineNumber
                 $lineText = $match.Line.Trim()
-                Write-Host "   ➤ Match in $file:$lineNumber → $lineText"
+                Write-Host "   ➤ Match in ${file}:${lineNumber} → $lineText"
             }
             $hasIssue = $true
         }
