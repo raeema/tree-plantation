@@ -1,35 +1,26 @@
-name: Check for Debug Statements
-
+name: Scan PR for System.debug and console.log
+ 
 on:
-  pull_request:
-    branches:
-      - '**'  # Trigger on PRs to any branch
-
+  workflow_dispatch: # Manual trigger
+ 
 jobs:
   check-debug:
-    name: Scan for System.debug and console.log
+    name: Scan PR Delta
     runs-on: ubuntu-latest
-
+ 
     steps:
-      - name: Checkout code with full history
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Required to get full Git history
-
-      - name: Fetch base branch
-        run: git fetch origin ${{ github.base_ref }}
-
-      - name: Run debug scan script
+          fetch-depth: 0 # Needed to get full git history for PR comparison
+ 
+      - name: Set script permissions
+        run: |
+          mkdir -p debug
+          cp detect_systemdebug.ps1 debug/
+          chmod +x debug/detect_systemdebug.ps1
+ 
+      - name: Run debug detection PowerShell script
         shell: pwsh
         run: |
-          # Save the script to file
-          $scriptContent = @'
-          # (Paste the entire PowerShell script content here)
-          '@
-
-          $scriptPath = "./detect_systemdebug.ps1"
-          $scriptContent | Out-File -FilePath $scriptPath -Encoding utf8
-
-          # Run the script
-          pwsh $scriptPath
-
+          ./debug/detect_systemdebug.ps1
