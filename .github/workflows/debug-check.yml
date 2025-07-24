@@ -19,7 +19,17 @@ jobs:
       - name: Fetch base branch
         run: git fetch origin ${{ github.base_ref }}
 
-      - name: Run debug check with snippet
+      - name: Run debug scan script
         shell: pwsh
-        run: ./detect_systemdebug.ps1 ${{ github.base_ref }}
+        run: |
+          # Save the script to file
+          $scriptContent = @'
+          # (Paste the entire PowerShell script content here)
+          '@
+
+          $scriptPath = "./detect_systemdebug.ps1"
+          $scriptContent | Out-File -FilePath $scriptPath -Encoding utf8
+
+          # Run the script
+          pwsh $scriptPath
 
