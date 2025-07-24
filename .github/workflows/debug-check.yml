@@ -1,30 +1,29 @@
-name: Check for Debug Statements
+name: CheckDebug
 
 on:
   pull_request:
     branches:
-      - '**'  # Trigger on PRs to any branch
+      - '**'   # Trigger on any PR branch
 
 jobs:
   check-debug:
-    name: Scan for System.debug and console.log
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code with full history
+      - name: Checkout repo with full history
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required to get full Git history
+          fetch-depth: 0   # fetch full history
 
-      - name: Set up Git user
+      - name: Prepare debug directory and copy script
         run: |
-          git config --global user.email "you@example.com"
-          git config --global user.name "GitHub Action"
+          mkdir -p ${{ github.workspace }}/debug
+          cp ${{ github.workspace }}/detect_systemdebug.ps1 ${{ github.workspace }}/debug/
+          chmod -x detect_systemdebug.ps1
 
-      - name: Fetch base branch
-        run: git fetch origin ${{ github.base_ref }}
-
-      - name: Run debug check with snippet
+      - name: Fail PR if System.debug or console.log found
         shell: pwsh
-        run: ./scripts/detect_systemdebug.ps1 ${{ github.base_ref }}
-
+        run: |
+          cd ${{ github.workspace }}
+          ls -l
+          chmod -x detect_systemdebug.ps1
+          ./detect_systemdebug.ps1
