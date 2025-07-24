@@ -1,23 +1,21 @@
 # ================================
-# Get PR target branch
+# PowerShell script to scan PR changes for System.debug and console.log
+# Expects env vars: GITHUB_BASE_REF and GITHUB_HEAD_REF
 # ================================
-$targetBranchRef = $env:GITHUB_BASE_REF
-$headBranchRef = $env:GITHUB_HEAD_REF
 
-if (-not $targetBranchRef) {
-    Write-Error "❌ GITHUB_BASE_REF not set. This script should run in a PR context."
+# Get PR target and head branches from environment variables
+$targetBranch = $env:GITHUB_BASE_REF
+$headBranch = $env:GITHUB_HEAD_REF
+
+if (-not $targetBranch) {
+    Write-Error "❌ GITHUB_BASE_REF not set. This script must run in a PR context."
     exit 1
 }
-
-$targetBranch = $targetBranchRef
-$headBranch = $headBranchRef
 
 Write-Host "🔄 Fetching target branch: $targetBranch"
 git fetch origin $targetBranch
 
-# ================================
-# Validate if common base exists
-# ================================
+# Find common merge base commit between target branch and HEAD
 $mergeBase = git merge-base origin/$targetBranch HEAD
 
 if (-not $mergeBase) {
@@ -25,10 +23,8 @@ if (-not $mergeBase) {
     exit 1
 }
 
-# ================================
-# Get changed files
-# ================================
-$diffFiles = git diff --name-only origin/$targetBranch...HEAD
+# Get list of changed files between merge base and HEAD
+$diffFiles = git diff --name-only $mergeBase HEAD
 
 if (-not $diffFiles) {
     Write-Host "✅ No files changed in this PR."
@@ -39,19 +35,16 @@ Write-Host "🔍 Scanning changed files for 'System.debug' and 'console.log'..."
 
 $hasIssue = $false
 
-# ================================
-# Analyze each file
-# ================================
 foreach ($file in $diffFiles) {
     if (Test-Path $file) {
         # Check for System.debug
         $debugMatches = Select-String -Path $file -Pattern '\bSystem\.debug\b'
         if ($debugMatches) {
-            Write-Host "❌ System.debug found in: ${file}"
+            Write-Host "❌ System.debug found in: $file"
             foreach ($match in $debugMatches) {
                 $lineNumber = $match.LineNumber
                 $lineText = $match.Line.Trim()
-                Write-Host "   ➤ Match in ${file}:${lineNumber} → ${lineText}"
+                Write-Host "   ➤ Match in $file:$lineNumber → $lineText"
             }
             $hasIssue = $true
         }
@@ -59,14 +52,16 @@ foreach ($file in $diffFiles) {
         # Check for console.log
         $consoleMatches = Select-String -Path $file -Pattern '\bconsole\.log\b'
         if ($consoleMatches) {
-            Write-Host "❌ console.log found in: ${file}"
+            Write-Host "❌ console.log found in: $file"
             foreach ($match in $consoleMatches) {
                 $lineNumber = $match.LineNumber
                 $lineText = $match.Line.Trim()
-                Write-Host "   ➤ Match in ${file}:${lineNumber} → ${lineText}"
+                Write-Host "   ➤ Match in $file:$lineNumber → $lineText"
             }
             $hasIssue = $true
         }
+    } else {
+        Write-Warning "⚠️ File missing or deleted: $file"
     }
 }
 
