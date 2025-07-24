@@ -1,8 +1,7 @@
 # ================================================
-# Extract PR target branch (e.g., refs/heads/main)
+# Extract PR target branch (e.g., main)
 # ================================================
-$targetBranchRef = $env:SYSTEM_PULLREQUEST_TARGETBRANCH
-$targetBranch = $targetBranchRef -replace 'refs/heads/', ''
+$targetBranch = $env:GITHUB_BASE_REF
 
 Write-Host "🔄 Fetching target branch: $targetBranch"
 git fetch origin $targetBranch
